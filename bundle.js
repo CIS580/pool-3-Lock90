@@ -3,6 +3,7 @@
 
 /* Classes */
 const Game = require('./game');
+const Vector = require('./vector');
 
 /* Global variables */
 var canvas = document.getElementById('screen');
@@ -246,7 +247,37 @@ function update(elapsedTime) {
     }
   });
 
-  // TODO: Process ball collisions
+  // Process ball collisions
+  collisions.forEach(function(pair) {
+    // Find the normal of collision
+    var collisionNormal = {
+      x: pair.a.position.x - pair.b.position.x,
+      y: pair.a.position.y - pair.b.position.y
+    }
+    // calculate the overlap between balls
+    var overlap = 32 - Vector.magnitude(collisionNormal);
+    var collisionNormal = Vector.normalize(collisionNormal);
+    pair.a.position.x += collisionNormal.x * overlap / 2;
+    pair.a.position.y += collisionNormal.y * overlap / 2;
+    pair.b.position.x -= collisionNormal.x * overlap / 2;
+    pair.b.position.y -= collisionNormal.y * overlap / 2;
+    // Rotate the problem space so that the normal
+    // of collision lies along the x-axis
+    var angle = Math.atan2(collisionNormal.y, collisionNormal.x);
+    var a = Vector.rotate(pair.a.velocity, angle);
+    var b = Vector.rotate(pair.b.velocity, angle);
+    // Solve the collision along the x-axis
+    var s = a.x;
+    a.x = b.x;
+    b.x = s;
+    // Rotate the problem space back to world space
+    a = Vector.rotate(a, -angle);
+    b = Vector.rotate(b, -angle);
+    pair.a.velocity.x = a.x;
+    pair.a.velocity.y = a.y;
+    pair.b.velocity.x = b.x;
+    pair.b.velocity.y = b.y;
+  });
 }
 
 /**
@@ -305,7 +336,7 @@ function render(elapsedTime, ctx) {
   ctx.beginPath();
 }
 
-},{"./game":2}],2:[function(require,module,exports){
+},{"./game":2,"./vector":3}],2:[function(require,module,exports){
 "use strict";
 
 /**
@@ -361,6 +392,64 @@ Game.prototype.loop = function(newTime) {
 
   // Flip the back buffer
   this.frontCtx.drawImage(this.backBuffer, 0, 0);
+}
+
+},{}],3:[function(require,module,exports){
+/**
+ * @module Vector
+ * A library of vector functions.
+ */
+module.exports = exports = {
+  rotate: rotate,
+  dotProduct: dotProduct,
+  magnitude: magnitude,
+  normalize: normalize
+}
+
+/**
+ * @function rotate
+ * Rotates a vector about the Z-axis
+ * @param {Vector} a - the vector to rotate
+ * @param {float} angle - the angle to roatate by (in radians)
+ * @returns a new vector representing the rotated original
+ */
+function rotate(a, angle) {
+  return {
+    x: a.x * Math.cos(angle) - a.y * Math.sin(angle),
+    y: a.x * Math.sin(angle) + a.y * Math.cos(angle)
+  }
+}
+
+/**
+ * @function dotProduct
+ * Computes the dot product of two vectors
+ * @param {Vector} a the first vector
+ * @param {Vector} b the second vector
+ * @return the computed dot product
+ */
+function dotProduct(a, b) {
+  return a.x * b.x + a.y * b.y
+}
+
+/**
+ * @function magnitude
+ * Computes the magnitude of a vector
+ * @param {Vector} a the vector
+ * @returns the calculated magnitude
+ */
+function magnitude(a) {
+  return Math.sqrt(a.x * a.x + a.y * a.y);
+}
+
+/**
+ * @function normalize
+ * Normalizes the vector
+ * @param {Vector} a the vector to normalize
+ * @returns a new vector that is the normalized original
+ */
+function normalize(a) {
+  var mag = magnitude(a);
+  return {x: a.x / mag, y: a.y / mag};
 }
 
 },{}]},{},[1]);
